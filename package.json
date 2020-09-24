@@ -23,10 +23,14 @@
     "node": ">=6"
   },
   "dependencies": {
-    "@apollographql/apollo-tools": "0.4.8",
     "@apollo/federation": "file:federation-js",
     "@apollo/gateway": "file:gateway-js",
-    "apollo-federation-integration-testsuite": "file:federation-integration-testsuite-js"
+    "@apollographql/apollo-tools": "0.4.8",
+    "apollo-federation-integration-testsuite": "file:federation-integration-testsuite-js",
+    "graphql": "14"
+  },
+  "resolutions": {
+    "**/graphql": "^14.7.0"
   },
   "devDependencies": {
     "@types/jest": "25.2.3",
@@ -45,14 +49,13 @@
     "bunyan": "1.8.14",
     "codecov": "3.7.2",
     "deep-freeze": "0.0.1",
-    "graphql": "14.7.0",
     "graphql-tag": "2.11.0",
-    "jest": "25.5.4",
+    "jest": "26",
     "jest-config": "25.5.4",
     "jest-cucumber": "2.0.13",
     "jest-junit": "10.0.0",
-    "log4js": "6.3.0",
     "lerna": "3.22.1",
+    "log4js": "6.3.0",
     "nock": "13.0.4",
     "node-fetch": "2.6.1",
     "prettier": "2.1.1",

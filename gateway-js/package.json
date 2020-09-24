@@ -10,7 +10,13 @@
     "url": "git+https://github.com/apollographql/federation.git",
     "directory": "gateway-js/"
   },
-  "keywords": ["graphql", "federation", "gateway", "server", "apollo"],
+  "keywords": [
+    "graphql",
+    "federation",
+    "gateway",
+    "server",
+    "apollo"
+  ],
   "engines": {
     "node": ">=12.13.0 <15.0"
   },
@@ -29,11 +35,18 @@
     "apollo-server-env": "^2.4.5",
     "apollo-server-errors": "^2.4.2",
     "apollo-server-types": "^0.5.1",
+    "graphql": "14",
     "loglevel": "^1.6.1",
     "make-fetch-happen": "^8.0.0",
     "pretty-format": "^26.0.0"
   },
-  "peerDependencies": {
-    "graphql": "^14.5.0 || ^15.0.0"
+  "resolutinos": {
+    "**/graphql": "^14.7.0"
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "jest": "^26.4.2",
+    "ts-jest": "^26.4.0",
+    "typescript": "^4.0.3"
   }
 }

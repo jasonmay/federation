@@ -9,7 +9,11 @@
     "url": "git+https://github.com/apollographql/federation.git",
     "directory": "federation-js/"
   },
-  "keywords": ["graphql", "federation", "apollo"],
+  "keywords": [
+    "graphql",
+    "federation",
+    "apollo"
+  ],
   "author": "Apollo <opensource@apollographql.com>",
   "license": "MIT",
   "engines": {
@@ -22,6 +26,7 @@
     "apollo-graphql": "^0.6.0",
     "apollo-server-env": "^2.4.5",
     "core-js": "^3.4.0",
+    "graphql": "^14.7.0",
     "lodash.xorby": "^4.7.0"
   },
   "peerDependencies": {

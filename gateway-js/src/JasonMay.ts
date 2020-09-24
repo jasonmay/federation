@@ -6,8 +6,11 @@ import {
   GraphQLSchema,
   isAbstractType,
   isWrappingType,
+  isCompositeType,
   isNonNullType,
+  isNamedType,
   DocumentNode,
+  print,
   visit,
   visitWithTypeInfo
 } from 'graphql';
@@ -62,25 +65,41 @@ export function transformOperation(cfg: {
   schema: GraphQLSchema,
   allowed: Set<string>,
   denied: Set<string>
-}) {
+}): DocumentNode {
   let typeInfo = new TypeInfo(cfg.schema);
-  let newOperation = visit(cfg.operation, visitWithTypeInfo(typeInfo, {
+  return visit(cfg.operation, visitWithTypeInfo(typeInfo, {
     Field: {
       enter(node) {
-        let [types, nullFound] = resolveToRawObjectTypes(typeInfo.getType()!);
+        let [types, nullFound] = resolveToRawObjectTypes(typeInfo.getParentType()!);
         let resolvedTypeName = types[0].name; // TODO: loop when we want to work with abstract types
         let fieldName = node.name.value;
         let fqFieldName = `${resolvedTypeName}.${fieldName}`;
-        if (!cfg.allowed.has(fqFieldName) && (cfg.denied && cfg.denied.has(fqFieldName))) {
+        if (!cfg.allowed.has(fqFieldName) || (cfg.denied && cfg.denied.has(fqFieldName))) {
           if (nullFound) {
-            throw new Error("aaaaaaaaaaaaaaaaaaaaaaahh null fail fast");
+            throw new Error("Restriction on a non-nullable type not permitted");
           }
-          debugger;
+          else {
+            debugger;
+            return null;
+          }
         }
-        console.warn(typeInfo, node);
-        debugger;
+        return node;
+      },
+      leave(node) {
+        let [types] = resolveToRawObjectTypes(typeInfo.getType()!);
+        let fieldType = types[0];
+        if (isCompositeType(fieldType) && !node.selectionSet?.selections.length) {
+          let p = print;
+          debugger;
+          let parent = typeInfo.getParentType()
+          if (isNamedType(parent) && parent.name == "Query") {
+            debugger;
+            throw new Error("None of the fields in the query are permitted.");
+          }
+          return null;
+        }
+        return node;
       }
     }
   }));
-  cfg.operation = newOperation;
 }

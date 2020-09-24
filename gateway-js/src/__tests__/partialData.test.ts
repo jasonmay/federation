@@ -1,29 +1,49 @@
 import { GraphQLError } from 'graphql';
+import { print } from 'graphql/language';
 import gql from 'graphql-tag';
-import { buildQueryPlan, buildOperationContext } from '../buildQueryPlan';
+//import { buildQueryPlan, buildOperationContext } from '../buildQueryPlan';
 import { astSerializer, queryPlanSerializer } from '../snapshotSerializers';
 import { getFederatedTestingSchema } from './execution-utils';
 import { ComposedGraphQLSchema } from '@apollo/federation';
-import { WasmPointer } from '../QueryPlan';
+//import { WasmPointer } from '../QueryPlan';
 import { transformOperation } from '../JasonMay';
 
 expect.addSnapshotSerializer(astSerializer);
 expect.addSnapshotSerializer(queryPlanSerializer);
 
+
 describe('partialDataQueryPlan', () => {
   let schema: ComposedGraphQLSchema;
   let errors: GraphQLError[];
-  let queryPlannerPointer: WasmPointer;
+  //let queryPlannerPointer: WasmPointer;
+  let allowed: Set<string>;
+  let denied: Set<string>;
+
+  const transformOp = ({operationString, allowed, denied}:
+    {
+      operationString: string;
+      allowed: Set<string>;
+      denied: Set<string>;
+    }) => {
+    let operationDocument = gql(operationString);
+    let newOperation = transformOperation({
+      operation: operationDocument,
+      schema,
+      allowed,
+      denied,
+    });
+    return print(newOperation);
+  }
 
   beforeEach(() => {
-    ({ schema, errors, queryPlannerPointer } = getFederatedTestingSchema());
+    ({ schema, errors } = getFederatedTestingSchema());
     expect(errors).toHaveLength(0);
   });
 
   // GraphQLError: Cannot query field "isbn" on type "Book"
   // Probably an issue with extending / interfaces in composition. None of the fields from the base Book type
   // are showing up in the resulting schema.
-  it(`should break up when traversing an extension field on an interface type from a service`, () => {
+  it(`should allow/deny properly`, () => {
     const operationString = `#graphql
       query {
         topProducts {
@@ -35,28 +55,78 @@ describe('partialDataQueryPlan', () => {
       }
     `;
 
-    const operationDocument = gql(operationString);
+    let newOperationString = transformOp({
+      operationString,
+      allowed: new Set([
+        'Query.topProducts',
+        'Product.price',
+        'Product.reviews',
+      ]),
+      denied: new Set<string>(),
+    });
+    expect(newOperationString).toMatchInlineSnapshot(`
+      "{
+        topProducts {
+          price
+        }
+      }
+      "
+    `);
+    // Test deny by default
 
-    let allowed = new Set([
-      "Query.topProducts",
-      "Product.price",
-      "Product.reviews",
-      "Review.body",
-    ]);
+    newOperationString = transformOp({
+      operationString,
+      allowed: new Set([
+      'Query.topProducts',
+      'Product.price',
+      'Product.reviews',
+      'Review.body',
+    ]),
+      denied: new Set(['Review.body']),
+    });
+    expect(newOperationString).toMatchInlineSnapshot(`
+      "{
+        topProducts {
+          price
+        }
+      }
+      "
+    `);
+  });
+  it(`should throw when no queries are permitted`, () => {
+    const operationString = `#graphql
+      query {
+        topProducts {
+          price
+        }
+      }
+    `;
 
-    let denied: Set<string> = new Set();
+    expect(() => {
 
-    transformOperation({operation: operationDocument, schema, allowed, denied});
-
-    const queryPlan = buildQueryPlan(
-      buildOperationContext({
-        schema,
-        operationDocument,
+      denied = new Set();
+      transformOp({
         operationString,
-        queryPlannerPointer,
+        allowed: new Set([
+          'Query.topProducts',
+          'Product.reviews',
+        ]),
+        denied: new Set(['Review.body']),
       })
-    );
+    }).toThrowError();
 
+    //let newSDL = print(operationDocument);
+    //debugger;
+    //let oc = buildOperationContext({
+    //  schema,
+    //  operationDocument,
+    //  operationString: print(operationDocument),
+    //  queryPlannerPointer,
+    //});
+
+    //const queryPlan = buildQueryPlan(oc);
+
+    /*
     expect(queryPlan).toMatchInlineSnapshot(`
       QueryPlan {
         Sequence {
@@ -105,6 +175,6 @@ describe('partialDataQueryPlan', () => {
           },
         },
       }
-    `);
+    `); */
   });
 });
