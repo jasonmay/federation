@@ -149,7 +149,7 @@ describe('partialDataQueryPlan', () => {
     `);
   });
 
-  it(`redact mutation`, () => {
+  it(`should redact mutation`, () => {
     const operationString = `#graphql
       mutation {
         createReview(upc: "1", body: "cool")
