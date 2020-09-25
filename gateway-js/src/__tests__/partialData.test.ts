@@ -165,4 +165,50 @@ describe('partialDataQueryPlan', () => {
       console.warn(o);
     }).toThrowError();
   });
+
+  it(`should not confuse union types with overlapping field names`, () => {
+    const operationString = `#graphql
+      query {
+          body {
+            ... on Image {
+              attributes {
+                url
+              }
+            }
+            ... on Text {
+              attributes {
+                bold
+                text
+              }
+            }
+          }
+        }
+    `;
+
+    const newOperationString = transformOp({
+      operationString,
+      allowed: new Set([
+        'Query.body',
+        'Body.image',
+        'Image.attributes',
+        'ImageAttributes.url',
+        'Text.attributes',
+        'TextAttributes.url',
+        'Text.text',
+      ]),
+      denied: new Set(),
+    });
+    expect(newOperationString).toMatchInlineSnapshot(`
+      "{
+        body {
+          ... on Image {
+            attributes {
+              url
+            }
+          }
+        }
+      }
+      "
+    `);
+  });
 });

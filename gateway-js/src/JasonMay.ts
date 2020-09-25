@@ -64,14 +64,12 @@ export function transformOperation({
             }
           }
           if (nullFound) {
-            throw new Error("Restriction on a non-nullable type not permitted");
+            throw new Error(`Restriction on a non-nullable type on '${fqFieldName}' not permitted`);
           }
           else {
-            console.warn(node.name);
             return null;
           }
         }
-        // TODO figure out why "return false" doesn't do the same
         return undefined;
       },
       leave(node) {
@@ -83,7 +81,15 @@ export function transformOperation({
           }
           return null;
         }
-        // TODO figure out why "return false" doesn't do the same
+        return undefined;
+      }
+    },
+    InlineFragment: {
+      leave(node) {
+        // When fields are redacted, sometimes InlineFragments are left empty
+        if (!node.selectionSet?.selections.length) {
+          return null;
+        }
         return undefined;
       }
     }
