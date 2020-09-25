@@ -1,27 +1,27 @@
 import { GraphQLError } from 'graphql';
 import { print } from 'graphql/language';
 import gql from 'graphql-tag';
-//import { buildQueryPlan, buildOperationContext } from '../buildQueryPlan';
 import { astSerializer, queryPlanSerializer } from '../snapshotSerializers';
 import { getFederatedTestingSchema } from './execution-utils';
 import { ComposedGraphQLSchema } from '@apollo/federation';
-//import { WasmPointer } from '../QueryPlan';
 import { transformOperation } from '../JasonMay';
 
 expect.addSnapshotSerializer(astSerializer);
 expect.addSnapshotSerializer(queryPlanSerializer);
 
-
 describe('partialDataQueryPlan', () => {
   let schema: ComposedGraphQLSchema;
   let errors: GraphQLError[];
 
-  const transformOp = ({operationString, allowed, denied}:
-    {
-      operationString: string;
-      allowed: Set<string>;
-      denied: Set<string>;
-    }) => {
+  const transformOp = ({
+    operationString,
+    allowed,
+    denied,
+  }: {
+    operationString: string;
+    allowed: Set<string>;
+    denied: Set<string>;
+  }) => {
     let operationDocument = gql(operationString);
     let newOperation = transformOperation({
       operation: operationDocument,
@@ -30,7 +30,7 @@ describe('partialDataQueryPlan', () => {
       denied,
     });
     return print(newOperation);
-  }
+  };
 
   beforeEach(() => {
     ({ schema, errors } = getFederatedTestingSchema());
@@ -74,11 +74,11 @@ describe('partialDataQueryPlan', () => {
     newOperationString = transformOp({
       operationString,
       allowed: new Set([
-      'Query.topProducts',
-      'Product.price',
-      'Product.reviews',
-      'Review.body',
-    ]),
+        'Query.topProducts',
+        'Product.price',
+        'Product.reviews',
+        'Review.body',
+      ]),
       denied: new Set(['Review.body']),
     });
     expect(newOperationString).toMatchInlineSnapshot(`
@@ -94,6 +94,7 @@ describe('partialDataQueryPlan', () => {
   it(`should throw when no queries are permitted`, () => {
     const operationString = `#graphql
       query {
+        body
         topProducts {
           price
         }
@@ -103,12 +104,9 @@ describe('partialDataQueryPlan', () => {
     expect(() => {
       transformOp({
         operationString,
-        allowed: new Set([
-          'Query.topProducts',
-          'Product.reviews',
-        ]),
-        denied: new Set(['Review.body']),
-      })
+        allowed: new Set(['Query.topProducts', 'Product.reviews']),
+        denied: new Set(),
+      });
     }).toThrowError();
   });
 
@@ -125,12 +123,46 @@ describe('partialDataQueryPlan', () => {
     expect(() => {
       transformOp({
         operationString,
-        allowed: new Set([
-          'Query.topProducts',
-          'Product.price',
-        ]),
+        allowed: new Set(['Query.topProducts', 'Product.price']),
         denied: new Set(['Review.body']),
-      })
+      });
+    }).toThrowError();
+  });
+
+  it(`should allow mutation`, () => {
+    const operationString = `#graphql
+      mutation {
+        createReview(upc: "1", body: "cool")
+      }
+    `;
+
+    let newOperationString = transformOp({
+      operationString,
+      allowed: new Set(['Mutation.createReview']),
+      denied: new Set(),
+    });
+    expect(newOperationString).toMatchInlineSnapshot(`
+      "mutation {
+        createReview(upc: \\"1\\", body: \\"cool\\")
+      }
+      "
+    `);
+  });
+
+  it(`redact mutation`, () => {
+    const operationString = `#graphql
+      mutation {
+        createReview(upc: "1", body: "cool")
+      }
+    `;
+
+    expect(() => {
+      let o = transformOp({
+        operationString,
+        allowed: new Set(),
+        denied: new Set(),
+      });
+      console.warn(o);
     }).toThrowError();
   });
 });

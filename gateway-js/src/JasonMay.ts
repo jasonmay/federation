@@ -6,11 +6,8 @@ import {
   GraphQLCompositeType,
   GraphQLSchema,
   isListType,
-  isScalarType,
-  isEnumType,
   isCompositeType,
   isNonNullType,
-  isNamedType,
   DocumentNode,
   visit,
   visitWithTypeInfo
@@ -54,36 +51,40 @@ export function transformOperation({
   return visit(operation, visitWithTypeInfo(typeInfo, {
     Field: {
       enter(node) {
-        let nodeType = typeInfo.getType();
-        if (node.name.value === "body") {
-          debugger;
-        }
         let [, nullFound] = resolveToRawType({fieldType: typeInfo.getType()!});
         let parentType = typeInfo.getParentType()!
         let resolvedTypeName = parentType.name; // TODO: loop when we want to work with abstract types
         let fieldName = node.name.value;
         let fqFieldName = `${resolvedTypeName}.${fieldName}`;
+
         if (!allowed.has(fqFieldName) || (denied && denied.has(fqFieldName))) {
+          if (parentType.name === "Mutation") {
+            if (node.selectionSet?.selections.length ?? 0 <= 1) {
+              throw new Error("No mutations in operation are permitted");
+            }
+          }
           if (nullFound) {
             throw new Error("Restriction on a non-nullable type not permitted");
           }
           else {
+            console.warn(node.name);
             return null;
           }
         }
-        return node;
+        // TODO figure out why "return false" doesn't do the same
+        return undefined;
       },
       leave(node) {
-        let nodeType = typeInfo.getType();
         let [fieldType] = resolveToRawType({fieldType: typeInfo.getType()!});
         if (isCompositeType(fieldType) && !node.selectionSet?.selections.length) {
-          let parent = typeInfo.getParentType()
-          if (isNamedType(parent) && parent.name == "Query") {
-            throw new Error("None of the fields in the query are permitted.");
+          let parent = typeInfo.getParentType()!
+          if (parent.name === "Query" || parent.name === "Mutation") {
+            throw new Error("None of the items in the operation are permitted.");
           }
           return null;
         }
-        return node;
+        // TODO figure out why "return false" doesn't do the same
+        return undefined;
       }
     }
   }));
