@@ -15,9 +15,6 @@ expect.addSnapshotSerializer(queryPlanSerializer);
 describe('partialDataQueryPlan', () => {
   let schema: ComposedGraphQLSchema;
   let errors: GraphQLError[];
-  //let queryPlannerPointer: WasmPointer;
-  let allowed: Set<string>;
-  let denied: Set<string>;
 
   const transformOp = ({operationString, allowed, denied}:
     {
@@ -93,6 +90,7 @@ describe('partialDataQueryPlan', () => {
       "
     `);
   });
+
   it(`should throw when no queries are permitted`, () => {
     const operationString = `#graphql
       query {
@@ -103,8 +101,6 @@ describe('partialDataQueryPlan', () => {
     `;
 
     expect(() => {
-
-      denied = new Set();
       transformOp({
         operationString,
         allowed: new Set([
@@ -114,67 +110,27 @@ describe('partialDataQueryPlan', () => {
         denied: new Set(['Review.body']),
       })
     }).toThrowError();
+  });
 
-    //let newSDL = print(operationDocument);
-    //debugger;
-    //let oc = buildOperationContext({
-    //  schema,
-    //  operationDocument,
-    //  operationString: print(operationDocument),
-    //  queryPlannerPointer,
-    //});
-
-    //const queryPlan = buildQueryPlan(oc);
-
-    /*
-    expect(queryPlan).toMatchInlineSnapshot(`
-      QueryPlan {
-        Sequence {
-          Fetch(service: "product") {
-            {
-              topProducts {
-                __typename
-                ... on Book {
-                  price
-                  __typename
-                  isbn
-                }
-                ... on Furniture {
-                  price
-                  __typename
-                  upc
-                }
-              }
-            }
-          },
-          Flatten(path: "topProducts.@") {
-            Fetch(service: "reviews") {
-              {
-                ... on Book {
-                  __typename
-                  isbn
-                }
-                ... on Furniture {
-                  __typename
-                  upc
-                }
-              } =>
-              {
-                ... on Book {
-                  reviews {
-                    body
-                  }
-                }
-                ... on Furniture {
-                  reviews {
-                    body
-                  }
-                }
-              }
-            },
-          },
-        },
+  it(`should throw when a non-nullable field is restricted`, () => {
+    const operationString = `#graphql
+      query {
+        topProducts {
+          upc
+          price
+        }
       }
-    `); */
+    `;
+
+    expect(() => {
+      transformOp({
+        operationString,
+        allowed: new Set([
+          'Query.topProducts',
+          'Product.price',
+        ]),
+        denied: new Set(['Review.body']),
+      })
+    }).toThrowError();
   });
 });
