@@ -92,6 +92,15 @@ export function transformOperation({
         }
         return undefined;
       }
+    },
+    FragmentDefinition: {
+      leave(node) {
+        // When fields are redacted, sometimes FragmentDefinitions are left empty
+        if (!node.selectionSet?.selections.length) {
+          return null;
+        }
+        return undefined;
+      }
     }
   }));
 }

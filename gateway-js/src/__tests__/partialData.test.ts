@@ -166,7 +166,7 @@ describe('partialDataQueryPlan', () => {
     }).toThrowError();
   });
 
-  it(`should not confuse union types with overlapping field names`, () => {
+  it(`should handle redacting fields in inline fragments`, () => {
     const operationString = `#graphql
       query {
           body {
@@ -206,6 +206,56 @@ describe('partialDataQueryPlan', () => {
               url
             }
           }
+        }
+      }
+      "
+    `);
+  });
+
+  it('shohuld handle redacting fields in fragment spreads', () => {
+    const operationString = `#graphql
+      fragment TextFragment on Text {
+        attributes {
+          bold
+          text
+        }
+      }
+
+      query {
+        body {
+          ... on Image {
+            ...TextFragment
+          }
+          ... on Body {
+            ...TextFragment
+          }
+          ...TextFragment
+        }
+      }
+    `;
+
+    const newOperationString = transformOp({
+      operationString,
+      allowed: new Set([
+        'Query.body',
+        'Body.image',
+        'Image.attributes',
+        'ImageAttributes.url',
+        'Text.attributes',
+        'Text.text',
+      ]),
+      denied: new Set(),
+    });
+    expect(newOperationString).toMatchInlineSnapshot(`
+      "{
+        body {
+          ... on Image {
+            ...TextFragment
+          }
+          ... on Body {
+            ...TextFragment
+          }
+          ...TextFragment
         }
       }
       "
